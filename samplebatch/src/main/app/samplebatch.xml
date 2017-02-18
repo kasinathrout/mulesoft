@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+<sfdc:config name="Salesforce__Basic_Authentication" username="kasinath_r@yahoo.com" password="$Monday1" securityToken="io3xILWF5nf3nO0aeqydy56Lw" doc:name="Salesforce: Basic Authentication"/>
+    <smtp:gmail-connector name="Gmail" fromAddress="kasinath_r@yahoo.com" replyToAddresses="kasinath_r@yahoo.com" validateConnections="true" doc:name="Gmail"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <file:connector name="File" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <batch:job name="samplebatchBatch">
+        <batch:input>
+            <sfdc:query config-ref="Salesforce__Basic_Authentication" query="dsql:SELECT AccountNumber,AccountSource,Name,NumberOfEmployees,Site FROM Account" doc:name="Salesforce"/>
+        </batch:input>
+        <batch:process-records>
+            <batch:step name="Batch_Step1">
+                <logger message="Batch Step 1 : #[payload]" level="INFO" doc:name="Logger"/>
+            </batch:step>
+            <batch:step name="Batch_Step">
+                <set-variable variableName="accout" value="#[payload]" doc:name="Variable"/>
+                <json:object-to-json-transformer mimeType="application/json" doc:name="Object to JSON"/>
+                <logger message="Payload after transformation :#[flowVars.accout.AccountNumber]" level="INFO" doc:name="Logger"/>
+                <file:outbound-endpoint path="/Users/kasinathrout/muleProjects/batch/files" outputPattern="#[flowVars.accout.AccountNumber]" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <logger message="Batch Success" level="INFO" doc:name="Logger"/>
+        </batch:on-complete>
+    </batch:job>
+    <flow name="samplebatchFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/execute" doc:name="HTTP"/>
+        <batch:execute name="samplebatchBatch" doc:name="samplebatchBatch"/>
+        <set-payload value="Success" doc:name="Set Payload"/>
+    </flow>
+</mule>
